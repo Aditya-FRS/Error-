@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Junior Abacus Simulator</title>
+
+<style>
+body{
+    margin:0;
+    background:#e9e9e9;
+    font-family:Georgia, serif;
+    text-align:center;
+}
+
+h1{
+    margin:10px 0 30px;
+    font-size:56px;
+    font-weight:bold;
+}
+
+#abacus{
+    display:block;
+    margin:auto;
+    background:#e9e9e9;
+    cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>Math Junior Abacus Simulator</h1>
+
+<canvas id="abacus" width="1800" height="600"></canvas>
+
+<script>
+
+const canvas = document.getElementById("abacus");
+const ctx = canvas.getContext("2d");
+
+const COLS = 17;
+
+const rodSpacing = 100;
+const leftMargin = 120;
+
+const beamY = 180;
+const frameTop = 80;
+const frameBottom = 500;
+
+const beadWidth = 76;
+const beadHeight = 42;
+const lowerGap = 55;
+
+const rods = [];
+
+function createAbacus(){
+
+    rods.length = 0;
+
+    for(let c=0;c<COLS;c++){
+
+        rods.push({
+            upper:false,
+            lower:[false,false,false,false]
+        });
+    }
+}
+
+function roundedRect(x,y,w,h,r,color){
+
+    ctx.fillStyle=color;
+
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+
+    ctx.fill();
+}
+
+function drawBead(x,y,color){
+
+    roundedRect(
+        x-beadWidth/2+4,
+        y-beadHeight/2+4,
+        beadWidth,
+        beadHeight,
+        10,
+        "rgba(0,0,0,0.15)"
+    );
+
+    roundedRect(
+        x-beadWidth/2,
+        y-beadHeight/2,
+        beadWidth,
+        beadHeight,
+        10,
+        color
+    );
+}
+
+function draw(){
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // frame
+    ctx.strokeStyle="black";
+    ctx.lineWidth=5;
+
+    ctx.beginPath();
+    ctx.moveTo(leftMargin-40,frameTop);
+    ctx.lineTo(leftMargin+(COLS-1)*rodSpacing+40,frameTop);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(leftMargin-40,frameBottom);
+    ctx.lineTo(leftMargin+(COLS-1)*rodSpacing+40,frameBottom);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(leftMargin-40,beamY);
+    ctx.lineTo(leftMargin+(COLS-1)*rodSpacing+40,beamY);
+    ctx.stroke();
+
+    // rods
+    for(let c=0;c<COLS;c++){
+
+        const x = leftMargin + c*rodSpacing;
+
+        ctx.lineWidth=5;
+        ctx.beginPath();
+        ctx.moveTo(x,frameTop);
+        ctx.lineTo(x,frameBottom);
+        ctx.stroke();
+
+        // upper bead
+        let upperY = rods[c].upper ? beamY-35 : frameTop+25;
+
+        drawBead(
+            x,
+            upperY,
+            rods[c].upper ? "#b79c8c" : "#e00000"
+        );
+
+        // lower beads
+        for(let b=0;b<4;b++){
+
+            let y;
+
+            if(rods[c].lower[b]){
+                y = beamY + 35 + b*lowerGap;
+            }else{
+                y = beamY + 80 + b*lowerGap;
+            }
+
+            drawBead(
+                x,
+                y,
+                "#e00000"
+            );
+        }
+    }
+
+    // white markers
+    ctx.fillStyle="#fff";
+
+    [2,5,8,11,14].forEach(i=>{
+
+        const x = leftMargin + i*rodSpacing;
+
+        ctx.beginPath();
+        ctx.arc(x,beamY,5,0,Math.PI*2);
+        ctx.fill();
+    });
+}
+
+function hitTest(mx,my){
+
+    for(let c=0;c<COLS;c++){
+
+        const x = leftMargin + c*rodSpacing;
+
+        // upper bead
+        let upperY = rods[c].upper ? beamY-35 : frameTop+25;
+
+        if(
+            mx>x-beadWidth/2 &&
+            mx<x+beadWidth/2 &&
+            my>upperY-beadHeight/2 &&
+            my<upperY+beadHeight/2
+        ){
+            rods[c].upper=!rods[c].upper;
+            draw();
+            return;
+        }
+
+        // lower beads
+        for(let b=0;b<4;b++){
+
+            let y;
+
+            if(rods[c].lower[b]){
+                y = beamY + 35 + b*lowerGap;
+            }else{
+                y = beamY + 80 + b*lowerGap;
+            }
+
+            if(
+                mx>x-beadWidth/2 &&
+                mx<x+beadWidth/2 &&
+                my>y-beadHeight/2 &&
+                my<y+beadHeight/2
+            ){
+
+                rods[c].lower[b] = !rods[c].lower[b];
+                draw();
+                return;
+            }
+        }
+    }
+}
+
+canvas.addEventListener("click",(e)=>{
+
+    const rect = canvas.getBoundingClientRect();
+
+    hitTest(
+        e.clientX - rect.left,
+        e.clientY - rect.top
+    );
+});
+
+createAbacus();
+draw();
+
+</script>
+
+</body>
+</html>
